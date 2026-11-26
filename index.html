@@ -106,7 +106,8 @@ h2 small{font-size:14px;color:var(--mute);font-weight:600}
  .panel::before{content:'';display:block;width:44px;height:5px;border-radius:3px;background:var(--line);margin:4px auto 8px}}
 @media (min-width:900px){.panel{top:0;right:0;bottom:0;width:380px;border-radius:0;padding:16px}.panel[hidden]{transform:translateX(105%)}}
 .panel .card{border:0;border-left:0;background:none;padding:0}
-.panel .x{position:absolute;right:10px;top:8px;border:0;background:none;color:var(--mute);font-size:26px;line-height:1;cursor:pointer;min-height:44px;min-width:44px}
+.panel .card .row:first-child,.panel h2{padding-right:44px}
+.panel .x{position:absolute;z-index:5;right:10px;top:8px;border:0;background:none;color:var(--mute);font-size:26px;line-height:1;cursor:pointer;min-height:44px;min-width:44px}
 .offl{display:grid;gap:4px;margin-top:8px}.offl button{display:flex;gap:10px;align-items:center;text-align:left;min-height:44px;padding:6px 10px;border:1px solid var(--line);border-radius:10px;background:transparent;color:var(--ink);cursor:pointer}
 .offl i{width:12px;height:12px;border-radius:50%;flex:none}.offl b{font-family:var(--hf);min-width:70px}.offl span{color:var(--mute);font-size:14px}
 .back{border:0;background:none;color:var(--acc);font-weight:700;padding:0;min-height:36px;cursor:pointer}
