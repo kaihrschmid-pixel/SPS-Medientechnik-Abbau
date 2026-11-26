@@ -41,6 +41,10 @@ input[type=search]{flex:1 1 180px}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,320px),1fr));gap:12px}
 .card{background:var(--card);border-radius:12px;padding:12px;border-left:8px solid var(--t,var(--line));display:flex;flex-direction:column;gap:8px}
 .card.done{opacity:.55}
+.card{position:relative;overflow:hidden;isolation:isolate}
+.card>.bgm{position:absolute;z-index:-2;background-image:var(--plan);background-repeat:no-repeat;pointer-events:none}
+.card>.bgv{position:absolute;inset:0;z-index:-1;background:linear-gradient(90deg,rgba(255,255,255,.92) 0%,rgba(255,255,255,.85) 60%,rgba(255,255,255,.45) 100%);pointer-events:none}
+.card>.ring{position:absolute;z-index:-1;width:58px;height:58px;margin:-29px 0 0 -29px;border:4px solid #00b3b3;border-radius:50%;pointer-events:none;box-shadow:0 0 0 3px rgba(255,255,255,.8)}
 .row{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
 .pos{font-size:24px;font-weight:800;line-height:1}
 .bez{font-weight:600}
@@ -161,7 +165,7 @@ async function rpc(fn,body){
 function main(U){
 const D=U.data;
 if(D.title){document.getElementById('ttl').textContent=D.title;document.title=D.title}
-document.getElementById('planImg').src=U.img;
+document.getElementById('planImg').src=U.img;document.documentElement.style.setProperty('--plan',`url(${U.img})`);
 const ST=[['offen','Offen','#7a828e'],['zusp','Zuspieler gesichert','#c98a00'],['disp','Displays ab','#0a5cff'],['pack','Gepackt','#0f8b8d'],['abgebaut','Abgebaut','#00a05a']];
 const stMap={'offen':'offen','Zuspieler gesichert':'zusp','Displays ab':'disp','gepackt':'pack','abgebaut':'abgebaut'};
 const TC={A:'var(--A)',B:'var(--B)',C:'var(--C)'};
@@ -194,7 +198,10 @@ function renderPos(){
    .sort((a,b)=>a[1].prio-b[1].prio||(a[1].status==='abgebaut')-(b[1].status==='abgebaut')||a[0].team.localeCompare(b[0].team)||a[0].pos.localeCompare(b[0].pos,'de',{numeric:true}));
   sel('posGrid').innerHTML=list.length?list.map(([p,s])=>card(p,s)).join(''):'<p class="empty">Keine POS für diesen Filter.</p>';
 }
-function card(p,s){return `<article class="card${s.status==='abgebaut'?' done':''}" style="--t:${TC[p.team]}">
+const PS=1.25,IW=3228,IH=1867,SC=IW/4150;
+function bg(p){const L=LOC[p.pos];if(!L)return '';const X=(L[0]-550)*SC*PS,Y=(L[1]-150)*SC*PS;
+  return `<div class="bgm" style="left:calc(100% - 46px - ${X.toFixed(0)}px);top:${(46-Y).toFixed(0)}px;width:${(IW*PS).toFixed(0)}px;height:${(IH*PS).toFixed(0)}px;background-size:100% 100%"></div><div class="bgv"></div><div class="ring" style="left:calc(100% - 46px);top:46px"></div>`}
+function card(p,s){return `<article class="card${s.status==='abgebaut'?' done':''}" style="--t:${TC[p.team]}">${bg(p)}
    <div class="row"><span class="pos">${esc(p.pos)}</span><span class="bez">${esc(p.bez)}</span></div>
    <div class="row"><span class="tag" style="background:${TC[p.team]};color:${p.team==='C'?'#111':'#fff'}">Team ${esc(p.team)}</span>${s.prio===1?'<span class="tag p1">Prio 1</span>':'<span class="tag">Prio 2</span>'}${p.raum?'<span class="tag raum">Raum</span>':''}${p.led?'<span class="tag led">vor LED-Wand</span>':''}<span class="tag">${p.disp} Displays · ${p.zusp} Zuspieler</span></div>
    ${p.dl?`<div class="art"><b>Displays</b> ${esc(p.dl)}</div>`:''}${p.zl?`<div class="art"><b>Zuspieler</b> ${esc(p.zl)}</div>`:''}
