@@ -78,7 +78,7 @@ h2 small{font-size:14px;color:var(--mute);font-weight:600}
 .banner{background:var(--C);color:#05050F;padding:8px 12px;border-radius:8px;font-weight:600;margin-bottom:10px;display:none}
 .empty{color:var(--mute);padding:24px 0}
 .pmap{position:relative;height:calc(100dvh - var(--hh,200px));margin:-14px calc(-1*max(4vw,12px)) -60px;overflow:hidden}
-#lmap{position:absolute;inset:0;background:#0b0b14}
+#lmap,#vmap{position:absolute;inset:0;background:#0b0b14}
 .leaflet-container{font-family:var(--uf);background:#0b0b14}
 .leaflet-image-layer.plimg{filter:invert(.92) hue-rotate(180deg) contrast(.95) brightness(.85)}
 .leaflet-control-zoom a{background:var(--card)!important;color:#fff!important;border-color:var(--line)!important}
@@ -109,6 +109,19 @@ h2 small{font-size:14px;color:var(--mute);font-weight:600}
 .panel .card{border:0;border-left:0;background:none;padding:0}
 .panel .card .row:first-child,.panel h2{padding-right:44px}
 .panel .x{position:absolute;z-index:5;right:10px;top:8px;border:0;background:none;color:var(--mute);font-size:26px;line-height:1;cursor:pointer;min-height:44px;min-width:44px}
+.vr{stroke-linecap:round;transition:opacity .25s}.vfocus .vr:not(.sel){opacity:.18}
+.vend{width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;background:#fff;box-shadow:0 0 0 2px #05050F;font:700 10px/1 'Space Grotesk',sans-serif;color:#fff;white-space:nowrap}
+.vend span{position:absolute;left:14px;top:-1px;text-shadow:0 0 3px #000,0 0 3px #000}
+#vmap[data-z="0"] .vend span,#vmap[data-z="1"] .vend span{display:none}
+.vc{border-top:1px solid var(--line);padding:10px 0;display:grid;gap:6px}
+.vc .nm{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}.vc .nm b{font-family:var(--hf)}
+.vst{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}
+.vst button{min-height:40px;border:2px solid var(--line);background:transparent;color:var(--ink);border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;padding:2px}
+.vst button.on{background:var(--sc);border-color:var(--sc);color:#fff}
+.vall{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px;color:var(--mute)}
+.vall button{min-height:36px;padding:0 12px;border-radius:999px;border:1.5px solid var(--acc);background:transparent;color:var(--acc);font-weight:700;cursor:pointer}
+.vg h3{font-family:var(--hf);font-size:16px;margin:14px 0 6px;display:flex;justify-content:space-between}
+.vg h3 small{color:var(--mute);font-weight:500}
 .offl{display:grid;gap:4px;margin-top:8px}.offl button{display:flex;gap:10px;align-items:center;text-align:left;min-height:44px;padding:6px 10px;border:1px solid var(--line);border-radius:10px;background:transparent;color:var(--ink);cursor:pointer}
 .offl i{width:12px;height:12px;border-radius:50%;flex:none}.offl b{font-family:var(--hf);min-width:70px}.offl span{color:var(--mute);font-size:14px}
 .back{border:0;background:none;color:var(--acc);font-weight:700;padding:0;min-height:36px;cursor:pointer}
@@ -134,7 +147,7 @@ h2 small{font-size:14px;color:var(--mute);font-weight:600}
     <div class="bar"><b id="sP1">–</b> <span>Prio 1 erledigt</span><div class="meter"><i id="mP1" style="width:0"></i></div></div>
     <div class="bar"><b id="sPack">–</b> <span>Packliste ✓</span><div class="meter"><i id="mPack" style="width:0"></i></div></div>
   </div>
-  <nav><a href="#pos" data-v="pos">POS-Board</a><a href="#plan" data-v="plan">Grundriss</a><a href="#pack" data-v="pack">Packliste</a><a href="#ablauf" data-v="ablauf">Ablauf</a></nav>
+  <nav><a href="#pos" data-v="pos">POS-Board</a><a href="#plan" data-v="plan">Grundriss</a><a href="#pack" data-v="pack">Packliste</a><a href="#vvk" data-v="vvk">Vorverkabelung</a><a href="#ablauf" data-v="ablauf">Ablauf</a></nav>
 </header>
 <main>
   <div class="banner" id="banner"></div>
@@ -156,6 +169,13 @@ h2 small{font-size:14px;color:var(--mute);font-weight:600}
     <div class="filters" id="fPack"></div>
     <div class="filters"><button class="chip" id="hidePacked">Gepacktes aus</button><input type="search" id="qPack" placeholder="Artikel, Lieferschein oder Auftrag suchen"></div>
     <div id="packList"></div>
+  </section>
+  <section id="v-vvk" hidden>
+    <div class="pmap" id="vwrap"><div id="vmap"></div>
+      <div class="pover"><span class="legend" id="vLeg"></span><span class="lvs"><button class="chip" data-vlv="hall">Halle</button><button class="chip" data-vlv="va">Vertical Area</button></span><button class="chip" data-vo="__list" id="vListBtn">Liste</button>
+        <span class="lvs" id="vRet"></span></div>
+      <aside class="panel" id="vpanel" hidden aria-live="polite"><button class="x" id="vpanelX" aria-label="Schließen">×</button><div id="vpanelIn"></div></aside>
+    </div>
   </section>
   <section id="v-ablauf" hidden class="ab"><div id="abList"></div></section>
 </main>
@@ -204,7 +224,7 @@ const ST=[['offen','Offen','#4A4F63'],['zusp','Zuspieler gesichert','#F36940'],[
 const stMap={'offen':'offen','Zuspieler gesichert':'zusp','Displays ab':'disp','gepackt':'pack','abgebaut':'abgebaut'};
 const TC={A:'var(--A)',B:'var(--B)',C:'var(--C)'};
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const S={pos:{},pack:{},ablauf:{}};
+const S={pos:{},pack:{},ablauf:{},vvk:{}};
 let online=false,canWrite=true,since='1970-01-01T00:00:00Z';
 const ls=(k,v)=>{try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){return null}};
 const me=document.getElementById('me');me.value=ls('abbau-me')||'';me.addEventListener('change',()=>ls('abbau-me',me.value.trim()));
@@ -312,19 +332,93 @@ function renderAb(){
     return h+`<div class="item${s.done?' done':''}"><input type="checkbox" data-ab="${a.id}" ${s.done?'checked':''} aria-label="erledigt"><span class="time">${esc(a.t)}</span>
     <div><div class="nm">${esc(a.task)}</div><div class="sub">${esc(a.who)}${a.note?' · '+esc(a.note):''}${s.by?' · ✓ '+esc(s.by)+' '+esc(s.at||''):''}</div></div></div>`}).join('');
 }
-const render=()=>{stats();renderPos();renderPlan();renderPack();renderAb()};
+const VS=[['offen','Offen','#4A4F63'],['ab','Abgezogen','#F36940'],['auf','Aufgewickelt','#5654A2'],['pack','Gepackt','#74BA5B']];
+const RETS=[['','Alle'],['Lang','Lang'],['CGS','CGS'],['Westpark','Westpark'],['4media','4media']];
+const RETN={Lang:'Lang',CGS:'CGS',Westpark:'Westpark (pave)','4media':'4media – nimmt selbst mit'};
+const VV=D.vvk||[];const vst=c=>(S.vvk[c.id]||{}).st||'offen';const vix=k=>VS.findIndex(x=>x[0]===k);
+const ours=c=>c.ret!=='4media';
+const ROUTES=(()=>{const m=new Map();for(const c of VV){const k=c.sb+'→'+c.eb;if(!m.has(k))m.set(k,{k,sb:c.sb,eb:c.eb,ws:c.ws,we:c.we,cs:[]});m.get(k).cs.push(c)}return [...m.values()]})();
+const rst=r=>{const o=r.cs.filter(ours);if(!o.length)return null;return VS[Math.min(...o.map(c=>vix(vst(c))))][0]};
+let VM=null,VLV='hall',VOV=null,VL={},openV=null,VF='';
+const vll=w=>[PL[w.m].h-w.y,w.x];
+const vzc=()=>{if(!VM)return;const z=VM.getZoom(),o=VLV==='va'?-1:0;sel('vmap').dataset.z=z<-2+o?0:z<-1+o?1:z<0+o?2:3};
+function vSetLevel(lv,keep){
+  VLV=lv;const P=PL[lv],B=[[0,0],[P.h,P.w]];
+  if(VOV)VOV.remove();VOV=L.imageOverlay(lv==='hall'?U.img:U.img2,B,{className:'plimg'}).addTo(VM);
+  VM.setMaxBounds(L.latLngBounds(B).pad(.3));
+  if(!keep){VM.fitBounds(B,{animate:false});if(!isDesk())VM.setView(L.latLngBounds(B).getCenter(),lv==='hall'?-1.5:-1.25,{animate:false})}
+  document.querySelectorAll('[data-vlv]').forEach(b=>b.classList.toggle('on',b.dataset.vlv===lv));vDraw();vzc();
+}
+function vDraw(){
+  if(!VM)return;Object.values(VL).forEach(x=>x.forEach(l=>l.remove()));VL={};
+  const ends={};
+  for(const r of ROUTES){
+    if(!r.ws||!r.we||r.ws.m!==VLV||r.we.m!==VLV)continue;
+    if(VF&&!r.cs.some(c=>c.ret===VF))continue;
+    const s=rst(r),col=s?VS[vix(s)][2]:'#6b6f80',sel_=openV===r.k;
+    const a=vll(r.ws),b=vll(r.we);const ls=[];
+    if(a[0]===b[0]&&a[1]===b[1]){ls.push(L.circleMarker(a,{radius:sel_?14:10,color:col,weight:4,fill:false,className:'vr'+(sel_?' sel':'')}))}
+    else{if(sel_)ls.push(L.polyline([a,b],{color:'#00B7E9',weight:14,opacity:.35,className:'vr sel',interactive:false}));
+      ls.push(L.polyline([a,b],{color:col,weight:sel_?7:Math.min(3+r.cs.length,8),dashArray:s?null:'6 8',className:'vr'+(sel_?' sel':'')}));}
+    ls.forEach(l=>{l.on('click',e=>{L.DomEvent.stopPropagation(e);vOpen(r.k,true)});l.bindTooltip(`${r.sb} → ${r.eb} · ${r.cs.length} Kabel`,{sticky:true});l.addTo(VM)});
+    VL[r.k]=ls;ends[r.sb]=r.ws;ends[r.eb]=r.we;
+  }
+  for(const [n,w] of Object.entries(ends)){const m=L.marker(vll(w),{interactive:false,icon:L.divIcon({className:'',iconSize:[0,0],html:`<div class="vend"><span>${esc(n)}</span></div>`})}).addTo(VM);(VL['_'+n]=[m])}
+}
+function vInit(){
+  if(VM||!window.L)return;
+  VM=L.map('vmap',{crs:L.CRS.Simple,minZoom:-3,maxZoom:2,zoomSnap:.25,zoomDelta:.5,attributionControl:false});
+  VM.zoomControl.setPosition('bottomleft');VM.on('zoomend',vzc);VM.on('click',()=>vClose());vSetLevel(VLV);
+}
+function vOpen(k,fly){openV=k;sel('vpanel').hidden=false;sel('vwrap').classList.add('vfocus');renderV();
+  const r=ROUTES.find(x=>x.k===k);if(!fly||!r||!r.ws||!r.we)return;
+  if(r.ws.m!==VLV)vSetLevel(r.ws.m);
+  requestAnimationFrame(()=>{const pan=sel('vpanel'),pad=40;const br=isDesk()?[pan.offsetWidth+pad,pad]:[pad,Math.min(pan.offsetHeight,sel('vwrap').offsetHeight*.58)+pad];
+    VM.flyToBounds(L.latLngBounds([vll(r.ws),vll(r.we)]),{paddingTopLeft:[pad,90],paddingBottomRight:br,maxZoom:0.5,duration:.5})});
+}
+function vClose(){openV=null;sel('vpanel').hidden=true;sel('vwrap').classList.remove('vfocus');renderV()}
+function vCable(c){const s=vst(c),S_=S.vvk[c.id]||{};
+  return `<div class="vc"><div class="nm"><b>${esc(c.id)}</b><span>${esc(c.art)} · ${c.len} m</span>${c.tr?'<span class="tag">Trommel</span>':''}${c.vv?'<span class="tag led">VVVK</span>':''}</div>
+  <div class="note">${esc(c.s)} → ${esc(c.e)} · ${esc(c.use)} · ${esc(c.a)}</div>
+  ${ours(c)?`<div class="vst">${VS.map(([k,l,col])=>`<button data-vc="${esc(c.id)}" data-vs="${k}" class="${s===k?'on':''}" style="--sc:${col}" aria-pressed="${s===k}">${l}</button>`).join('')}</div><div class="meta"><span>${S_.by?esc(S_.by)+' · '+esc(S_.at||''):'noch nicht angefasst'}</span></div>`:'<div class="note">4media baut und nimmt selbst mit – nicht von uns abbauen.</div>'}</div>`}
+function renderV(){
+  vDraw();
+  const o=VV.filter(ours),done=o.filter(c=>vst(c)==='pack').length;
+  sel('vListBtn').textContent=`Liste · ${done}/${o.length} gepackt`;
+  sel('vLeg').innerHTML=VS.map(([k,l,c])=>`<span class="lg"><i style="background:${c}"></i>${l}</span>`).join('');
+  sel('vRet').innerHTML=RETS.map(([k,l])=>`<button class="chip${VF===k?' on':''}" data-vf="${k}">${l}</button>`).join('');
+  const P=sel('vpanelIn');
+  if(openV==='__list'){
+    const grp=[...new Set(VV.map(c=>c.ret))].filter(g=>!VF||g===VF);
+    P.innerHTML=`<h2 style="margin-top:4px">Vorverkabelung</h2><p class="note">${VV.length} Kabel · ${VV.filter(c=>!c.ws).length} davon aus dem Rigg (ohne Planplatz).</p>`+grp.map(g=>{
+      const rs=ROUTES.filter(r=>r.cs.some(c=>c.ret===g));const cs=VV.filter(c=>c.ret===g),dn=cs.filter(c=>vst(c)==='pack').length;
+      return `<div class="vg"><h3>${esc(RETN[g]||g)} <small>${g==='4media'?cs.length+' Kabel':dn+'/'+cs.length+' gepackt'}</small></h3><div class="offl">${rs.map(r=>{const s=rst(r);const n=r.cs.filter(c=>c.ret===g).length;
+        return `<button data-vo="${esc(r.k)}"><i style="background:${s?VS[vix(s)][2]:'#6b6f80'}"></i><b>${esc(r.sb)} → ${esc(r.eb)}</b><span>${n} Kabel${r.ws?'':' · Rigg'}</span></button>`}).join('')}</div></div>`}).join('');
+  }else if(openV){const r=ROUTES.find(x=>x.k===openV);if(r){const o=r.cs.filter(ours);
+    P.innerHTML=`<button class="back" data-vo="__list">‹ Liste</button><h2 style="margin-top:2px">${esc(r.sb)} → ${esc(r.eb)}</h2><p class="note">${r.cs.length} Kabel${r.ws?'':' · Start im Rigg, nicht im Plan'}</p>
+    ${o.length>1?`<div class="vall">Alle ${o.length}: ${VS.slice(1).map(([k,l])=>`<button data-vall="${esc(r.k)}" data-vs="${k}">${l}</button>`).join('')}</div>`:''}
+    ${r.cs.map(vCable).join('')}`}}
+}
+const render=()=>{stats();renderPos();renderPlan();renderPack();renderAb();renderV()};
 
 async function save(col,id,data){
   const who=me.value.trim()||'?';const body=Object.assign({},S[col][id]||{},data,{by:who,at:now()});
   S[col][id]=body;render();
   if(!canWrite)return;
-  try{await rpc('set_state',{p_key:U.rpcKey,p_col:col,p_id:id,p_data:body});pull()}catch(e){if(e.status===401||e.status===403){canWrite=false;banner('Zugang zur Datenbank verweigert – Seite neu laden.')}else banner('Speichern hat gerade nicht geklappt – bitte nochmal tippen.')}
+  const rc=col==='vvk'?'pack':col,ri=col==='vvk'?'v:'+id:id;
+  try{await rpc('set_state',{p_key:U.rpcKey,p_col:rc,p_id:ri,p_data:body});pull()}catch(e){if(e.status===401||e.status===403){canWrite=false;banner('Zugang zur Datenbank verweigert – Seite neu laden.')}else banner('Speichern hat gerade nicht geklappt – bitte nochmal tippen.')}
 }
 
 document.addEventListener('click',e=>{
   const g=e.target.closest('[data-goto]');if(g){location.hash='#plan';setTimeout(()=>openP(g.dataset.goto,true),60);return}
   const b=e.target.closest('button');if(!b)return;
   if(b.id==='panelX'){closeP();return}
+  if(b.id==='vpanelX'){vClose();return}
+  if(b.dataset.vo){vOpen(b.dataset.vo,b.dataset.vo!=='__list');return}
+  if(b.dataset.vlv){if(b.dataset.vlv!==VLV){vClose();vSetLevel(b.dataset.vlv)}return}
+  if('vf' in b.dataset){VF=b.dataset.vf;renderV();return}
+  if(b.dataset.vc){if(!me.value.trim()){me.focus();banner('Bitte oben kurz deinen Namen eintragen.');return}save('vvk',b.dataset.vc,{st:b.dataset.vs});return}
+  if(b.dataset.vall){if(!me.value.trim()){me.focus();banner('Bitte oben kurz deinen Namen eintragen.');return}const r=ROUTES.find(x=>x.k===b.dataset.vall);r.cs.filter(ours).forEach(c=>save('vvk',c.id,{st:b.dataset.vs}));return}
   if(b.dataset.off){openP(b.dataset.off,false);return}
   if(b.dataset.lv){if(b.dataset.lv!==LV){closeP();setLevel(b.dataset.lv)}return}
   if(b.dataset.st){const p=D.pos.find(x=>x.id===b.dataset.pos);if(!me.value.trim()){me.focus();banner('Bitte oben kurz deinen Namen eintragen.');return}banner('');save('pos',p.id,{status:b.dataset.st,prio:posState(p).prio})}
@@ -344,19 +438,20 @@ document.addEventListener('change',e=>{
 sel('qPos').addEventListener('input',e=>{F.q=e.target.value;renderPos()});
 sel('qPack').addEventListener('input',e=>{F.qp=e.target.value;renderPack()});
 
-function route(){const v=['pos','plan','pack','ablauf'].includes(location.hash.slice(1))?location.hash.slice(1):'pos';
-  for(const k of ['pos','plan','pack','ablauf'])sel('v-'+k).hidden=k!==v;document.querySelectorAll('nav a').forEach(a=>a.classList.toggle('on',a.dataset.v===v));
+function route(){const v=['pos','plan','pack','vvk','ablauf'].includes(location.hash.slice(1))?location.hash.slice(1):'pos';
+  for(const k of ['pos','plan','pack','vvk','ablauf'])sel('v-'+k).hidden=k!==v;document.querySelectorAll('nav a').forEach(a=>a.classList.toggle('on',a.dataset.v===v));
   document.documentElement.style.setProperty('--hh',document.querySelector('header').offsetHeight+'px');
-  if(v==='plan'){initMap();if(LM)setTimeout(()=>LM.invalidateSize(),0)}}
-addEventListener('resize',()=>{document.documentElement.style.setProperty('--hh',document.querySelector('header').offsetHeight+'px');if(LM)LM.invalidateSize()});
-addEventListener('keydown',e=>{if(e.key==='Escape'&&openPos)closeP()});
+  if(v==='plan'){initMap();if(LM)setTimeout(()=>LM.invalidateSize(),0)}
+  if(v==='vvk'){vInit();if(VM)setTimeout(()=>VM.invalidateSize(),0)}}
+addEventListener('resize',()=>{document.documentElement.style.setProperty('--hh',document.querySelector('header').offsetHeight+'px');if(LM)LM.invalidateSize();if(VM)VM.invalidateSize()});
+addEventListener('keydown',e=>{if(e.key==='Escape'){if(openPos)closeP();if(openV)vClose()}});
 addEventListener('hashchange',route);route();render();
 
 let busy=false;
 async function pull(){
   if(busy)return;busy=true;
   try{const rows=await rpc('get_state',{p_key:U.rpcKey,p_since:since});
-    if(rows.length){let mx=0;for(const r of rows){if(S[r.col])S[r.col][r.id]=r.data;mx=Math.max(mx,Date.parse(r.updated_at)||0)}
+    if(rows.length){let mx=0;for(const r of rows){if(r.col==='pack'&&r.id.startsWith('v:'))S.vvk[r.id.slice(2)]=r.data;else if(S[r.col])S[r.col][r.id]=r.data;mx=Math.max(mx,Date.parse(r.updated_at)||0)}
       if(mx)since=new Date(Math.max(Date.parse(since),mx-5000)).toISOString();render()}
     if(!online){online=true;banner('')}
   }catch(e){online=false;banner(e.status===401||e.status===403?'Zugang zur Datenbank verweigert.':'Keine Verbindung zur Datenbank – Änderungen werden evtl. nicht geteilt.')}
