@@ -355,11 +355,12 @@ function vDraw(){
   for(const r of ROUTES){
     if(!r.ws||!r.we||r.ws.m!==VLV||r.we.m!==VLV)continue;
     if(VF&&!r.cs.some(c=>c.ret===VF))continue;
-    const s=rst(r),col=s?VS[vix(s)][2]:'#6b6f80',sel_=openV===r.k;
+    const s=rst(r),col=s?(s==='offen'?'#E4E7F0':VS[vix(s)][2]):'#8a8fa3',sel_=openV===r.k;
     const a=vll(r.ws),b=vll(r.we);const ls=[];const pth=(D.vpath||{})[r.k];const line=pth&&VLV==='hall'?pth.map(([x,y])=>vll({m:'hall',x,y})):[a,b];
-    if(a[0]===b[0]&&a[1]===b[1]){ls.push(L.circleMarker(a,{radius:sel_?14:10,color:col,weight:4,fill:false,className:'vr'+(sel_?' sel':'')}))}
+    if(a[0]===b[0]&&a[1]===b[1]){ls.push(L.circleMarker(a,{radius:sel_?14:10,color:col,weight:5,fill:false,className:'vr'+(sel_?' sel':'')}))}
     else{if(sel_)ls.push(L.polyline(line,{color:'#00B7E9',weight:14,opacity:.35,className:'vr sel',interactive:false}));
-      ls.push(L.polyline(line,{color:col,weight:sel_?7:Math.min(2+r.cs.length,6),lineJoin:'round',dashArray:s?null:'6 8',className:'vr'+(sel_?' sel':'')}));}
+      ls.push(L.polyline(line,{color:'#05050F',weight:(sel_?7:Math.min(3+r.cs.length,7))+4,opacity:.85,lineJoin:'round',interactive:false,className:'vr'+(sel_?' sel':'')}));
+      ls.push(L.polyline(line,{color:col,weight:sel_?7:Math.min(3+r.cs.length,7),lineJoin:'round',dashArray:s?null:'6 8',className:'vr'+(sel_?' sel':'')}));}
     ls.forEach(l=>{l.on('click',e=>{L.DomEvent.stopPropagation(e);vOpen(r.k,true)});l.bindTooltip(`${r.sb} → ${r.eb} · ${r.cs.length} Kabel`,{sticky:true});l.addTo(VM)});
     VL[r.k]=ls;if(pth&&VLV==='hall'){const [s0,s1]=[pth[0],pth[pth.length-1]];ends[r.sb]=ends[r.sb]||{m:'hall',x:s0[0],y:s0[1]};ends[r.eb]={m:'hall',x:s1[0],y:s1[1]}}else{ends[r.sb]=ends[r.sb]||r.ws;ends[r.eb]=ends[r.eb]||r.we}
   }
@@ -386,7 +387,7 @@ function renderV(){
   vDraw();
   const o=VV.filter(ours),done=o.filter(c=>vst(c)==='pack').length;
   sel('vListBtn').textContent=`Liste · ${done}/${o.length} gepackt`;
-  sel('vLeg').innerHTML=VS.map(([k,l,c])=>`<span class="lg"><i style="background:${c}"></i>${l}</span>`).join('');
+  sel('vLeg').innerHTML=VS.map(([k,l,c])=>`<span class="lg"><i style="background:${k==='offen'?'#E4E7F0':c}"></i>${l}</span>`).join('');
   sel('vRet').innerHTML=RETS.map(([k,l])=>`<button class="chip${VF===k?' on':''}" data-vf="${k}">${l}</button>`).join('');
   const P=sel('vpanelIn');
   if(openV==='__list'){
