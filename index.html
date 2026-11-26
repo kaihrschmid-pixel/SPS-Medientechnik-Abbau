@@ -78,6 +78,7 @@ h2 small{font-size:14px;color:var(--mute);font-weight:600}
 .close{float:right;margin-bottom:8px}
 @media(max-width:600px){.ab .item{grid-template-columns:auto minmax(0,1fr)}.ab .time{grid-column:2}.bars b{font-size:17px}}
 @media(prefers-reduced-motion:no-preference){.meter i{transition:width .4s}}
+.art{font-size:14px;line-height:1.35;margin:4px 0}.art b{display:inline-block;min-width:74px;font-weight:600;opacity:.7}
 #lock{position:fixed;inset:0;z-index:50;background:#111418;display:flex;align-items:center;justify-content:center;padding:20px}
 #lock form{background:#fff;color:#111;border-radius:14px;padding:22px;max-width:360px;width:100%;display:grid;gap:12px}
 #lock h2{margin:0;font-size:22px}#lock p{margin:0}#lock input{font:inherit;font-size:18px;padding:12px;border:2px solid #ccd;border-radius:10px}
@@ -189,13 +190,14 @@ function stats(){
 
 function renderPos(){
   const q=F.q.toLowerCase();
-  const list=D.pos.map(p=>[p,posState(p)]).filter(([p,s])=>(!F.team||p.team===F.team)&&(!F.p1||s.prio===1)&&(!F.hide||s.status!=='abgebaut')&&(!q||(p.pos+' '+p.bez+' '+p.ber).toLowerCase().includes(q)))
+  const list=D.pos.map(p=>[p,posState(p)]).filter(([p,s])=>(!F.team||p.team===F.team)&&(!F.p1||s.prio===1)&&(!F.hide||s.status!=='abgebaut')&&(!q||(p.pos+' '+p.bez+' '+p.ber+' '+(p.dl||'')+' '+(p.zl||'')).toLowerCase().includes(q)))
    .sort((a,b)=>a[1].prio-b[1].prio||(a[1].status==='abgebaut')-(b[1].status==='abgebaut')||a[0].team.localeCompare(b[0].team)||a[0].pos.localeCompare(b[0].pos,'de',{numeric:true}));
   sel('posGrid').innerHTML=list.length?list.map(([p,s])=>card(p,s)).join(''):'<p class="empty">Keine POS für diesen Filter.</p>';
 }
 function card(p,s){return `<article class="card${s.status==='abgebaut'?' done':''}" style="--t:${TC[p.team]}">
    <div class="row"><span class="pos">${esc(p.pos)}</span><span class="bez">${esc(p.bez)}</span></div>
    <div class="row"><span class="tag" style="background:${TC[p.team]};color:${p.team==='C'?'#111':'#fff'}">Team ${esc(p.team)}</span>${s.prio===1?'<span class="tag p1">Prio 1</span>':'<span class="tag">Prio 2</span>'}${p.raum?'<span class="tag raum">Raum</span>':''}${p.led?'<span class="tag led">vor LED-Wand</span>':''}<span class="tag">${p.disp} Displays · ${p.zusp} Zuspieler</span></div>
+   ${p.dl?`<div class="art"><b>Displays</b> ${esc(p.dl)}</div>`:''}${p.zl?`<div class="art"><b>Zuspieler</b> ${esc(p.zl)}</div>`:''}
    ${p.note?`<div class="note">${esc(p.note)}</div>`:''}
    <div class="st">${ST.map(([k,l,c])=>`<button data-pos="${esc(p.id)}" data-st="${k}" class="${s.status===k?'on':''}" style="--sc:${c}" aria-pressed="${s.status===k}">${l}</button>`).join('')}</div>
    <div class="meta"><span>${s.by?esc(s.by)+' · '+esc(s.at||''):'noch nicht angefasst'}</span><button data-prio="${esc(p.id)}">${s.prio===1?'auf Prio 2 setzen':'auf Prio 1 setzen'}</button></div>
