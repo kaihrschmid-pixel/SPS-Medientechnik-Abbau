@@ -356,13 +356,14 @@ function vDraw(){
     if(!r.ws||!r.we||r.ws.m!==VLV||r.we.m!==VLV)continue;
     if(VF&&!r.cs.some(c=>c.ret===VF))continue;
     const s=rst(r),col=s?VS[vix(s)][2]:'#6b6f80',sel_=openV===r.k;
-    const a=vll(r.ws),b=vll(r.we);const ls=[];
+    const a=vll(r.ws),b=vll(r.we);const ls=[];const pth=(D.vpath||{})[r.k];const line=pth&&VLV==='hall'?pth.map(([x,y])=>vll({m:'hall',x,y})):[a,b];
     if(a[0]===b[0]&&a[1]===b[1]){ls.push(L.circleMarker(a,{radius:sel_?14:10,color:col,weight:4,fill:false,className:'vr'+(sel_?' sel':'')}))}
-    else{if(sel_)ls.push(L.polyline([a,b],{color:'#00B7E9',weight:14,opacity:.35,className:'vr sel',interactive:false}));
-      ls.push(L.polyline([a,b],{color:col,weight:sel_?7:Math.min(3+r.cs.length,8),dashArray:s?null:'6 8',className:'vr'+(sel_?' sel':'')}));}
+    else{if(sel_)ls.push(L.polyline(line,{color:'#00B7E9',weight:14,opacity:.35,className:'vr sel',interactive:false}));
+      ls.push(L.polyline(line,{color:col,weight:sel_?7:Math.min(2+r.cs.length,6),lineJoin:'round',dashArray:s?null:'6 8',className:'vr'+(sel_?' sel':'')}));}
     ls.forEach(l=>{l.on('click',e=>{L.DomEvent.stopPropagation(e);vOpen(r.k,true)});l.bindTooltip(`${r.sb} → ${r.eb} · ${r.cs.length} Kabel`,{sticky:true});l.addTo(VM)});
-    VL[r.k]=ls;ends[r.sb]=r.ws;ends[r.eb]=r.we;
+    VL[r.k]=ls;if(pth&&VLV==='hall'){const [s0,s1]=[pth[0],pth[pth.length-1]];ends[r.sb]=ends[r.sb]||{m:'hall',x:s0[0],y:s0[1]};ends[r.eb]={m:'hall',x:s1[0],y:s1[1]}}else{ends[r.sb]=ends[r.sb]||r.ws;ends[r.eb]=ends[r.eb]||r.we}
   }
+  if(VLV==='hall'&&D.vnet){const n=L.polyline(D.vnet.map(s=>s.map(([x,y])=>vll({m:'hall',x,y}))),{color:'#ffffff',weight:10,opacity:.07,interactive:false}).addTo(VM);VL._net=[n];n.bringToBack()}
   for(const [n,w] of Object.entries(ends)){const m=L.marker(vll(w),{interactive:false,icon:L.divIcon({className:'',iconSize:[0,0],html:`<div class="vend"><span>${esc(n)}</span></div>`})}).addTo(VM);(VL['_'+n]=[m])}
 }
 function vInit(){
@@ -374,7 +375,7 @@ function vOpen(k,fly){openV=k;sel('vpanel').hidden=false;sel('vwrap').classList.
   const r=ROUTES.find(x=>x.k===k);if(!fly||!r||!r.ws||!r.we)return;
   if(r.ws.m!==VLV)vSetLevel(r.ws.m);
   requestAnimationFrame(()=>{const pan=sel('vpanel'),pad=40;const br=isDesk()?[pan.offsetWidth+pad,pad]:[pad,Math.min(pan.offsetHeight,sel('vwrap').offsetHeight*.58)+pad];
-    VM.flyToBounds(L.latLngBounds([vll(r.ws),vll(r.we)]),{paddingTopLeft:[pad,90],paddingBottomRight:br,maxZoom:0.5,duration:.5})});
+    const pth=(D.vpath||{})[r.k];VM.flyToBounds(L.latLngBounds(pth&&r.ws.m==='hall'?pth.map(([x,y])=>vll({m:'hall',x,y})):[vll(r.ws),vll(r.we)]),{paddingTopLeft:[pad,90],paddingBottomRight:br,maxZoom:0.5,duration:.5})});
 }
 function vClose(){openV=null;sel('vpanel').hidden=true;sel('vwrap').classList.remove('vfocus');renderV()}
 function vCable(c){const s=vst(c),S_=S.vvk[c.id]||{};
