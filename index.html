@@ -49,7 +49,7 @@ input[type=search]{flex:1 1 180px}
 .card.done{opacity:.55}
 .card{overflow:hidden}
 .map{position:relative;height:150px;margin:-12px -12px 2px -12px;border-bottom:1px solid var(--line)}
-.map .mi{position:absolute;inset:0;background-image:var(--plan);background-repeat:no-repeat}
+.map .mi{position:absolute;inset:0;background-repeat:no-repeat}
 .map .mi,.plan img{filter:invert(.9) hue-rotate(180deg) contrast(.92)}
 .map .ring{position:absolute;left:50%;top:50%;width:62px;height:62px;margin:-31px 0 0 -31px;border:4px solid var(--acc);border-radius:50%;box-shadow:0 0 0 3px rgba(0,183,233,.25),0 0 18px rgba(0,183,233,.5)}
 .row{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
@@ -99,6 +99,7 @@ h2 small{font-size:14px;color:var(--mute);font-weight:600}
 .pover>*{pointer-events:auto}
 .legend{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:12px}.lg{display:flex;align-items:center;gap:4px}.lg i{width:10px;height:10px;border-radius:50%;display:inline-block}
 .pover .legend{background:rgba(5,5,15,.85);border:1px solid var(--line);border-radius:999px;padding:6px 12px}
+.lvs{display:flex;gap:4px}.pover .chip.on{background:var(--acc);color:#05050F;border-color:var(--acc)}
 .pover .chip{min-height:34px;padding:0 12px;font-size:13px;background:rgba(5,5,15,.85)}
 .panel{position:absolute;z-index:600;background:var(--card);border:1px solid var(--line);box-shadow:0 -6px 30px rgba(0,0,0,.6);transition:transform .35s cubic-bezier(.65,0,.35,1);overflow:auto;overscroll-behavior:contain}
 .panel[hidden]{display:block;visibility:hidden}
@@ -147,7 +148,7 @@ h2 small{font-size:14px;color:var(--mute);font-weight:600}
   </section>
   <section id="v-plan" hidden>
     <div class="pmap" id="pmap"><div id="lmap"></div>
-      <div class="pover"><span class="legend"><span class="lg"><i style="background:#4A4F63"></i>Offen</span><span class="lg"><i style="background:#F36940"></i>Zuspieler</span><span class="lg"><i style="background:#5654A2"></i>Displays ab</span><span class="lg"><i style="background:#00B7E9"></i>Gepackt</span><span class="lg"><i style="background:#74BA5B"></i>Abgebaut</span></span><span id="offChips"></span></div>
+      <div class="pover"><span class="legend"><span class="lg"><i style="background:#4A4F63"></i>Offen</span><span class="lg"><i style="background:#F36940"></i>Zuspieler</span><span class="lg"><i style="background:#5654A2"></i>Displays ab</span><span class="lg"><i style="background:#00B7E9"></i>Gepackt</span><span class="lg"><i style="background:#74BA5B"></i>Abgebaut</span></span><span class="lvs"><button class="chip" data-lv="hall">Halle</button><button class="chip" data-lv="va">Vertical Area</button></span><span id="offChips"></span></div>
       <aside class="panel" id="panel" hidden aria-live="polite"><button class="x" id="panelX" aria-label="Schließen">×</button><div id="panelIn"></div></aside>
     </div>
   </section>
@@ -167,13 +168,14 @@ const enc=new TextEncoder();
 const b64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
 async function sha(s){const h=await crypto.subtle.digest('SHA-256',enc.encode(s));return [...new Uint8Array(h)].map(b=>b.toString(16).padStart(2,'0')).join('')}
 async function unlock(pw){
-  const [dj,pj]=await Promise.all([fetch('data.enc',{cache:'no-cache'}).then(r=>r.json()),fetch('plan.enc',{cache:'no-cache'}).then(r=>r.json())]);
+  const [dj,pj,qj]=await Promise.all(['data.enc','plan.enc','plan2.enc'].map(f=>fetch(f,{cache:'no-cache'}).then(r=>r.json())));
   const base=await crypto.subtle.importKey('raw',enc.encode(pw),'PBKDF2',false,['deriveKey']);
   const key=await crypto.subtle.deriveKey({name:'PBKDF2',salt:b64(dj.salt),iterations:dj.iter,hash:'SHA-256'},base,{name:'AES-GCM',length:256},false,['decrypt']);
   const dec=o=>crypto.subtle.decrypt({name:'AES-GCM',iv:b64(o.iv)},key,b64(o.ct));
   const data=JSON.parse(new TextDecoder().decode(await dec(dj)));
   const img=URL.createObjectURL(new Blob([await dec(pj)],{type:'image/jpeg'}));
-  return {data,img,rpcKey:await sha('rpc:'+pw)};
+  const img2=URL.createObjectURL(new Blob([await dec(qj)],{type:'image/jpeg'}));
+  return {data,img,img2,rpcKey:await sha('rpc:'+pw)};
 }
 async function rpc(fn,body){
   const r=await fetch(SB_URL+'/rest/v1/rpc/'+fn,{method:'POST',headers:{apikey:SB_KEY,'Content-Type':'application/json'},body:JSON.stringify(body)});
@@ -197,7 +199,7 @@ async function rpc(fn,body){
 function main(U){
 const D=U.data;
 if(D.title){document.getElementById('ttl').textContent=D.title;document.title=D.title}
-document.documentElement.style.setProperty('--plan',`url(${U.img})`);
+document.documentElement.style.setProperty('--plan-hall',`url(${U.img})`);document.documentElement.style.setProperty('--plan-va',`url(${U.img2})`);
 const ST=[['offen','Offen','#4A4F63'],['zusp','Zuspieler gesichert','#F36940'],['disp','Displays ab','#5654A2'],['pack','Gepackt','#00B7E9'],['abgebaut','Abgebaut','#74BA5B']];
 const stMap={'offen':'offen','Zuspieler gesichert':'zusp','Displays ab':'disp','gepackt':'pack','abgebaut':'abgebaut'};
 const TC={A:'var(--A)',B:'var(--B)',C:'var(--C)'};
@@ -230,9 +232,10 @@ function renderPos(){
    .sort((a,b)=>a[1].prio-b[1].prio||(a[1].status==='abgebaut')-(b[1].status==='abgebaut')||a[0].team.localeCompare(b[0].team)||a[0].pos.localeCompare(b[0].pos,'de',{numeric:true}));
   sel('posGrid').innerHTML=list.length?list.map(([p,s])=>card(p,s)).join(''):'<p class="empty">Keine POS für diesen Filter.</p>';
 }
-const PS=1,IW=3228,IH=1867,SC=IW/4150;
-function bg(p){const L=LOC[p.pos];if(!L)return '';const W=IW*PS,H=IH*PS,X=(L[0]-550)*SC*PS,Y=(L[1]-150)*SC*PS;
-  return `<div class="map" data-goto="${esc(p.id)}" title="Im Grundriss zeigen" style="cursor:pointer"><div class="mi" style="background-size:${W.toFixed(0)}px ${H.toFixed(0)}px;background-position:calc(50% + ${(W/2-X).toFixed(0)}px) calc(50% + ${(H/2-Y).toFixed(0)}px)"></div><div class="ring"></div></div>`}
+const SC=3228/4150,PL={hall:{w:3228,h:1867,n:'Halle'},va:{w:2400,h:1249,n:'Vertical Area'}};
+const PP=p=>{const L=LOC[p.pos];if(L)return {m:'hall',x:(L[0]-550)*SC,y:(L[1]-150)*SC};const V=(D.valoc||{})[p.pos];return V?{m:'va',x:V[0],y:V[1]}:null};
+function bg(p){const q=PP(p);if(!q)return '';const W=PL[q.m].w,H=PL[q.m].h,X=q.x,Y=q.y;
+  return `<div class="map" data-goto="${esc(p.id)}" title="Im Grundriss zeigen" style="cursor:pointer"><div class="mi" style="background-image:var(--plan-${q.m});background-size:${W.toFixed(0)}px ${H.toFixed(0)}px;background-position:calc(50% + ${(W/2-X).toFixed(0)}px) calc(50% + ${(H/2-Y).toFixed(0)}px)"></div><div class="ring"></div></div>`}
 function card(p,s,nob){return `<article class="card${s.status==='abgebaut'?' done':''}" style="--t:${TC[p.team]}">${nob?'':bg(p)}
    <div class="row"><span class="pos">${esc(p.pos)}</span><span class="bez">${esc(p.bez)}</span></div>
    <div class="row"><span class="tag" style="background:${TC[p.team]};color:${p.team==='A'?'#fff':'#05050F'}">Team ${esc(p.team)}</span>${s.prio===1?'<span class="tag p1">Prio 1</span>':'<span class="tag">Prio 2</span>'}${p.raum?'<span class="tag raum">Raum</span>':''}${p.led?'<span class="tag led">vor LED-Wand</span>':''}<span class="tag">${p.disp} Displays · ${p.zusp} Zuspieler</span></div>
@@ -243,24 +246,31 @@ function card(p,s,nob){return `<article class="card${s.status==='abgebaut'?' don
   </article>`}
 const LOC=D.loc;
 const stCol=k=>(ST.find(x=>x[0]===k)||ST[0])[2];
-let openPos=null,LM=null,MK={};
+let openPos=null,LM=null,MK={},LV='hall',OV=null;
 const HEX={A:'#F04541',B:'#00B7E9',C:'#FFBA3B'};
-const ll=p=>{const L=LOC[p.pos];return [IH-(L[1]-150)*SC,(L[0]-550)*SC]};
-const icon=(p,s)=>L.divIcon({className:'',iconSize:[0,0],html:`<div class="pm${s.prio===1?' p1':''}${openPos===p.id?' sel':''}" style="--sc:${stCol(s.status)};--tc:${HEX[p.team]}">${esc(p.pos.length>4?p.pos.slice(0,4):p.pos)}</div>`});
+const ll=q=>[PL[q.m].h-q.y,q.x];
+const icon=(p,s)=>L.divIcon({className:'',iconSize:[0,0],html:`<div class="pm${s.prio===1?' p1':''}${openPos===p.id?' sel':''}" style="--sc:${stCol(s.status)};--tc:${HEX[p.team]}">${esc(p.pos.startsWith('LED-')?p.pos.slice(4):p.pos==='Technikraum'?'TR':p.pos)}</div>`});
+const zc=()=>{if(!LM)return;const z=LM.getZoom(),o=LV==='va'?-1:0;sel('lmap').dataset.z=z<-2+o?0:z<-1+o?1:z<0+o?2:3};
+function setLevel(lv,keepView){
+  LV=lv;const P=PL[lv],B=[[0,0],[P.h,P.w]];
+  if(OV)OV.remove();Object.values(MK).forEach(m=>m.remove());MK={};
+  OV=L.imageOverlay(lv==='hall'?U.img:U.img2,B,{className:'plimg'}).addTo(LM);
+  LM.setMaxBounds(L.latLngBounds(B).pad(.3));
+  if(!keepView){LM.fitBounds(B,{animate:false});if(!isDesk())LM.setView(L.latLngBounds(B).getCenter(),lv==='hall'?-1.5:-1.25,{animate:false})}
+  for(const p of D.pos){const q=PP(p);if(!q||q.m!==lv)continue;const m=L.marker(ll(q),{icon:icon(p,posState(p)),keyboard:true,title:p.pos+' '+p.bez});m.on('click',()=>openP(p.id,true));m.addTo(LM);MK[p.id]=m}
+  document.querySelectorAll('[data-lv]').forEach(b=>b.classList.toggle('on',b.dataset.lv===lv));zc();
+}
 function initMap(){
   if(LM||!window.L)return;
   LM=L.map('lmap',{crs:L.CRS.Simple,minZoom:-3,maxZoom:2,zoomSnap:.25,zoomDelta:.5,attributionControl:false,zoomControl:true});
-  const B=[[0,0],[IH,IW]];L.imageOverlay(U.img,B,{className:'plimg'}).addTo(LM);LM.fitBounds(B);LM.setMaxBounds(L.latLngBounds(B).pad(.3));
-  LM.zoomControl.setPosition('bottomleft');
-  const zc=()=>{const z=LM.getZoom();sel('lmap').dataset.z=z<-2?0:z<-1?1:z<0?2:3};LM.on('zoomend',zc);
-  if(!isDesk())LM.setView(L.latLngBounds(B).getCenter(),-1.5);zc();
-  for(const p of D.pos.filter(p=>LOC[p.pos])){const m=L.marker(ll(p),{icon:icon(p,posState(p)),keyboard:true,title:p.pos+' '+p.bez});m.on('click',()=>openP(p.id,true));m.addTo(LM);MK[p.id]=m}
-  LM.on('click',()=>closeP());
+  LM.zoomControl.setPosition('bottomleft');LM.on('zoomend',zc);LM.on('click',()=>closeP());
+  setLevel(LV);
 }
 const isDesk=()=>matchMedia('(min-width:900px)').matches;
 function flyTo(p){
-  if(!LM||!LOC[p.pos])return;
-  const z=Math.max(LM.getZoom(),0.5),pt=LM.project(ll(p),z);
+  const q=PP(p);if(!LM||!q)return;
+  if(q.m!==LV){setLevel(q.m)}
+  const z=Math.max(LM.getZoom(),LV==='va'?-0.25:0.5),pt=LM.project(ll(q),z);
   const pan=sel('panel');const off=isDesk()?L.point(pan.offsetWidth/2,0):L.point(0,Math.min(pan.offsetHeight||sel('pmap').offsetHeight*.5,sel('pmap').offsetHeight*.58)/2);
   LM.flyTo(LM.unproject(pt.add(off),z),z,{duration:.5,easeLinearity:.2});
 }
@@ -273,11 +283,11 @@ function panelHTML(p,s){
 }
 function renderPlan(){
   if(LM)for(const p of D.pos){const m=MK[p.id];if(m)m.setIcon(icon(p,posState(p)))}
-  const off=D.pos.filter(p=>!LOC[p.pos]);
+  const off=D.pos.filter(p=>!PP(p));
   const od=off.filter(p=>posState(p).status==='abgebaut').length;
   sel('offChips').innerHTML=off.length?`<button class="chip" data-off="__off">Ohne Planplatz · ${od}/${off.length}</button>`:'';
-  if(openPos==='__off')sel('panelIn').innerHTML=`<h2 style="margin-top:4px">Ohne Planplatz</h2><p class="note">Vertical Area, NCC West und weitere Positionen, die nicht im Grundriss stehen.</p><div class="offl">${off.map(p=>{const s=posState(p);return `<button data-off="${esc(p.id)}"><i style="background:${stCol(s.status)}"></i><b>${esc(p.pos)}</b><span>${esc(p.bez)}</span></button>`}).join('')}</div>`;
-  else if(openPos){const p=D.pos.find(x=>x.id===openPos);if(p)sel('panelIn').innerHTML=(LOC[p.pos]?'':'<button class="back" data-off="__off">‹ Ohne Planplatz</button>')+panelHTML(p,posState(p))}
+  if(openPos==='__off')sel('panelIn').innerHTML=`<h2 style="margin-top:4px">Ohne Planplatz</h2><p class="note">NCC West hat keinen Grundriss.</p><div class="offl">${off.map(p=>{const s=posState(p);return `<button data-off="${esc(p.id)}"><i style="background:${stCol(s.status)}"></i><b>${esc(p.pos)}</b><span>${esc(p.bez)}</span></button>`}).join('')}</div>`;
+  else if(openPos){const p=D.pos.find(x=>x.id===openPos);if(p)sel('panelIn').innerHTML=(PP(p)?'':'<button class="back" data-off="__off">‹ Ohne Planplatz</button>')+panelHTML(p,posState(p))}
 }
 
 const trs=[...new Set(D.pack.map(i=>i.t))];
@@ -316,6 +326,7 @@ document.addEventListener('click',e=>{
   const b=e.target.closest('button');if(!b)return;
   if(b.id==='panelX'){closeP();return}
   if(b.dataset.off){openP(b.dataset.off,false);return}
+  if(b.dataset.lv){if(b.dataset.lv!==LV){closeP();setLevel(b.dataset.lv)}return}
   if(b.dataset.st){const p=D.pos.find(x=>x.id===b.dataset.pos);if(!me.value.trim()){me.focus();banner('Bitte oben kurz deinen Namen eintragen.');return}banner('');save('pos',p.id,{status:b.dataset.st,prio:posState(p).prio})}
   else if(b.dataset.prio){const p=D.pos.find(x=>x.id===b.dataset.prio);const s=posState(p);save('pos',p.id,{status:s.status,prio:s.prio===1?2:1})}
   else if('team' in b.dataset){F.team=b.dataset.team;document.querySelectorAll('#fPos [data-team]').forEach(c=>c.classList.toggle('on',c===b));renderPos()}
