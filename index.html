@@ -34,7 +34,9 @@ h1{font-family:var(--hf);font-size:clamp(22px,5vw,32px);font-weight:700;display:
 nav{display:flex;gap:4px;overflow-x:auto}
 nav{padding-bottom:3px}
 nav a{flex:none;padding:10px 16px;font-family:var(--hf);font-weight:700;color:var(--mute);text-decoration:none}
-nav a.on{color:var(--ink);box-shadow:inset 0 -3px 0 var(--acc)}
+nav a{position:relative}
+nav a.on{color:var(--ink)}
+nav a.on::after{content:'';position:absolute;left:8px;right:8px;bottom:-3px;height:5px;border-radius:3px 3px 0 0;background:var(--grad);background-size:var(--gw,100vw) 100%;background-position:calc(-1*var(--gx,0px)) 0}
 main{padding:14px max(4vw,12px) 60px;max-width:1240px;margin:0 auto}
 .filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;align-items:center}
 button,.chip,input,select{font:inherit;font-size:16px}
@@ -369,20 +371,36 @@ function vSetLevel(lv,keep){
   if(!keep){VM.fitBounds(B,{animate:false});if(!isDesk())VM.setView(L.latLngBounds(B).getCenter(),lv==='hall'?-1.5:-1.25,{animate:false})}
   document.querySelectorAll('[data-vlv]').forEach(b=>b.classList.toggle('on',b.dataset.vlv===lv));vDraw();vzc();
 }
+const VT=[['hdmi','Glasfaser-HDMI','#00B7E9',a=>a==='Glasfaser HDMI'],['sdi','SDI','#FFBA3B',a=>a==='SDI'],
+  ['lwl','LWL / opticalCON / Lemo','#B19CFF',a=>/MTP|opticalCON|OC QUAD|MPO|LC\/LC|Lemo/i.test(a)],['net','Netzwerk / USB / Steuer','#74BA5B',a=>/RJ45|USB|Steuer/i.test(a)],
+  ['pwr','Strom','#F04541',a=>/powerCon|LaKa/i.test(a)],['oth','HDMI / DP Kupfer','#F36940',()=>true]];
+const vtype=c=>VT.find(x=>x[3](c.art));
+const vOpenC=c=>c.ret==='4media'||vst(c)==='offen';
+function offsetLine(pts,d){if(!d||pts.length<2)return pts;const n=(a,b)=>{const dx=b[0]-a[0],dy=b[1]-a[1],l=Math.hypot(dx,dy)||1;return [-dy/l,dx/l]};
+  return pts.map((p,i)=>{const n1=i>0?n(pts[i-1],p):null,n2=i<pts.length-1?n(p,pts[i+1]):null;let nx,ny,k=1;
+    if(n1&&n2){nx=n1[0]+n2[0];ny=n1[1]+n2[1];const l=Math.hypot(nx,ny)||1;nx/=l;ny/=l;k=1/Math.max(.35,nx*n1[0]+ny*n1[1])}else{[nx,ny]=n1||n2}
+    return [p[0]+nx*d*k,p[1]+ny*d*k]})}
 function vDraw(){
   if(!VM)return;Object.values(VL).forEach(x=>x.forEach(l=>l.remove()));VL={};
-  const ends={};
+  const ends={},sc=Math.pow(2,VM.getZoom()),lane=6/sc;
   for(const r of ROUTES){
     if(!r.ws||!r.we||r.ws.m!==VLV||r.we.m!==VLV)continue;
-    if(VF&&!r.cs.some(c=>c.ret===VF))continue;
-    const s=rst(r),col=s?(s==='offen'?'#E4E7F0':VS[vix(s)][2]):'#8a8fa3',sel_=openV===r.k;
-    const a=vll(r.ws),b=vll(r.we);const ls=[];const pth=(D.vpath||{})[r.k];const line=pth&&VLV==='hall'?pth.map(([x,y])=>vll({m:'hall',x,y})):[a,b];
-    if(a[0]===b[0]&&a[1]===b[1]){ls.push(L.circleMarker(a,{radius:sel_?14:10,color:col,weight:5,fill:false,className:'vr'+(sel_?' sel':'')}))}
-    else{if(sel_)ls.push(L.polyline(line,{color:'#00B7E9',weight:14,opacity:.35,className:'vr sel',interactive:false}));
-      ls.push(L.polyline(line,{color:'#05050F',weight:(sel_?7:Math.min(3+r.cs.length,7))+4,opacity:.85,lineJoin:'round',interactive:false,className:'vr'+(sel_?' sel':'')}));
-      ls.push(L.polyline(line,{color:col,weight:sel_?7:Math.min(3+r.cs.length,7),lineJoin:'round',dashArray:s?null:'6 8',className:'vr'+(sel_?' sel':'')}));}
-    ls.forEach(l=>{l.on('click',e=>{L.DomEvent.stopPropagation(e);vOpen(r.k,true)});l.bindTooltip(`${r.sb} → ${r.eb} · ${r.cs.length} Kabel`,{sticky:true});l.addTo(VM)});
-    VL[r.k]=ls;if(pth&&VLV==='hall'){const [s0,s1]=[pth[0],pth[pth.length-1]];ends[r.sb]=ends[r.sb]||{m:'hall',x:s0[0],y:s0[1]};ends[r.eb]={m:'hall',x:s1[0],y:s1[1]}}else{ends[r.sb]=ends[r.sb]||r.ws;ends[r.eb]=ends[r.eb]||r.we}
+    const sel_=openV===r.k;
+    const cs=r.cs.filter(c=>(!VF||c.ret===VF)&&(sel_||vOpenC(c)));
+    if(!cs.length)continue;
+    const pth=(D.vpath||{})[r.k];const raw=pth&&VLV==='hall'?pth:[[r.ws.x,r.ws.y],[r.we.x,r.we.y]];
+    const ls=[];const types=VT.filter(t=>cs.some(c=>vtype(c)===t));
+    const same=raw.length===2&&raw[0][0]===raw[1][0]&&raw[0][1]===raw[1][1];
+    for(const ty of types){
+      const gi=VT.indexOf(ty),line=offsetLine(raw,(gi-2.5)*lane).map(([x,y])=>vll({m:VLV,x,y}));
+      const n=cs.filter(c=>vtype(c)===ty).length;
+      if(same){ls.push(L.circleMarker(line[0],{radius:(sel_?12:8)+gi*3,color:ty[2],weight:3,fill:false,className:'vr'+(sel_?' sel':'')}));continue}
+      if(sel_)ls.push(L.polyline(line,{color:'#ffffff',weight:9,opacity:.5,className:'vr sel',interactive:false}));
+      ls.push(L.polyline(line,{color:'#05050F',weight:7,opacity:.9,lineJoin:'round',interactive:false,className:'vr'+(sel_?' sel':'')}));
+      const pl=L.polyline(line,{color:ty[2],weight:4,lineJoin:'round',className:'vr'+(sel_?' sel':'')});pl.bindTooltip(`${r.sb} → ${r.eb} · ${n}× ${ty[1]}`,{sticky:true});ls.push(pl);
+    }
+    ls.forEach(l=>{l.on('click',e=>{L.DomEvent.stopPropagation(e);vOpen(r.k,true)});l.addTo(VM)});
+    VL[r.k]=ls;const s0=raw[0],s1=raw[raw.length-1];ends[r.sb]=ends[r.sb]||{m:VLV,x:s0[0],y:s0[1]};ends[r.eb]=ends[r.eb]||{m:VLV,x:s1[0],y:s1[1]};
   }
   if(VLV==='hall'&&D.vnet){const n=L.polyline(D.vnet.map(s=>s.map(([x,y])=>vll({m:'hall',x,y}))),{color:'#ffffff',weight:10,opacity:.07,interactive:false}).addTo(VM);VL._net=[n];n.bringToBack()}
   for(const [n,w] of Object.entries(ends)){const m=L.marker(vll(w),{interactive:false,icon:L.divIcon({className:'',iconSize:[0,0],html:`<div class="vend"><span>${esc(n)}</span></div>`})}).addTo(VM);(VL['_'+n]=[m])}
@@ -390,7 +408,7 @@ function vDraw(){
 function vInit(){
   if(VM||!window.L)return;
   VM=L.map('vmap',{crs:L.CRS.Simple,minZoom:-3,maxZoom:2,zoomSnap:.25,zoomDelta:.5,attributionControl:false});
-  VM.zoomControl.setPosition('bottomleft');VM.on('zoomend',vzc);VM.on('click',()=>vClose());vSetLevel(VLV);
+  VM.zoomControl.setPosition('bottomleft');VM.on('zoomend',()=>{vzc();vDraw()});VM.on('click',()=>vClose());vSetLevel(VLV);
 }
 function vOpen(k,fly){openV=k;sel('vpanel').hidden=false;sel('vwrap').classList.add('vfocus');renderV();
   const r=ROUTES.find(x=>x.k===k);if(!fly||!r||!r.ws||!r.we)return;
@@ -400,14 +418,14 @@ function vOpen(k,fly){openV=k;sel('vpanel').hidden=false;sel('vwrap').classList.
 }
 function vClose(){openV=null;sel('vpanel').hidden=true;sel('vwrap').classList.remove('vfocus');renderV()}
 function vCable(c){const s=vst(c),S_=S.vvk[c.id]||{};
-  return `<div class="vc"><div class="nm"><b>${esc(c.id)}</b><span>${esc(c.art)} · ${c.len} m</span>${c.tr?'<span class="tag">Trommel</span>':''}${c.vv?'<span class="tag led">VVVK</span>':''}</div>
+  return `<div class="vc"><div class="nm"><i style="width:12px;height:12px;border-radius:50%;background:${vtype(c)[2]};display:inline-block;flex:none;align-self:center"></i><b>${esc(c.id)}</b><span>${esc(c.art)} · ${c.len} m</span>${c.tr?'<span class="tag">Trommel</span>':''}${c.vv?'<span class="tag led">VVVK</span>':''}</div>
   <div class="note">${esc(c.s)} → ${esc(c.e)} · ${esc(c.use)} · ${esc(c.a)}</div>
   ${ours(c)?`<div class="vst">${VS.map(([k,l,col])=>`<button data-vc="${esc(c.id)}" data-vs="${k}" class="${s===k?'on':''}" style="--sc:${col}" aria-pressed="${s===k}">${l}</button>`).join('')}</div><div class="meta"><span>${S_.by?esc(S_.by)+' · '+esc(S_.at||''):'noch nicht angefasst'}</span></div>`:'<div class="note">4media baut und nimmt selbst mit – nicht von uns abbauen.</div>'}</div>`}
 function renderV(){
   vDraw();
   const o=VV.filter(ours),done=o.filter(c=>vst(c)==='pack').length;
   sel('vListBtn').textContent=`Liste · ${done}/${o.length} gepackt`;
-  sel('vLeg').innerHTML=VS.map(([k,l,c])=>`<span class="lg"><i style="background:${k==='offen'?'#E4E7F0':c}"></i>${l}</span>`).join('');
+  sel('vLeg').innerHTML=VT.map(([k,l,c])=>`<span class="lg"><i style="background:${c}"></i>${l}</span>`).join('')+'<span class="lg" style="color:var(--mute)">· abgebaute Kabel ausgeblendet</span>';
   sel('vRet').innerHTML=RETS.map(([k,l])=>`<button class="chip${VF===k?' on':''}" data-vf="${k}">${l}</button>`).join('');
   const P=sel('vpanelIn');
   if(openV==='__list'){
@@ -486,10 +504,12 @@ sel('qPack').addEventListener('input',e=>{F.qp=e.target.value;renderPack()});
 
 function route(){const v=['pos','plan','pack','vvk','ablauf'].includes(location.hash.slice(1))?location.hash.slice(1):'pos';
   for(const k of ['pos','plan','pack','vvk','ablauf'])sel('v-'+k).hidden=k!==v;document.querySelectorAll('nav a').forEach(a=>a.classList.toggle('on',a.dataset.v===v));
-  document.documentElement.style.setProperty('--hh',document.querySelector('header').offsetHeight+'px');
+  document.documentElement.style.setProperty('--hh',document.querySelector('header').offsetHeight+'px');navGrad();
   if(v==='plan'){initMap();if(LM)setTimeout(()=>LM.invalidateSize(),0)}
   if(v==='vvk'){vInit();if(VM)setTimeout(()=>VM.invalidateSize(),0)}}
-addEventListener('resize',()=>{document.documentElement.style.setProperty('--hh',document.querySelector('header').offsetHeight+'px');if(LM)LM.invalidateSize();if(VM)VM.invalidateSize()});
+function navGrad(){const h=document.querySelector('header').getBoundingClientRect(),a=document.querySelector('nav a.on');if(!a)return;const r=a.getBoundingClientRect();a.style.setProperty('--gw',h.width+'px');a.style.setProperty('--gx',(r.left+8-h.left)+'px')}
+document.querySelector('nav').addEventListener('scroll',navGrad,{passive:true});
+addEventListener('resize',()=>{navGrad();document.documentElement.style.setProperty('--hh',document.querySelector('header').offsetHeight+'px');if(LM)LM.invalidateSize();if(VM)VM.invalidateSize()});
 addEventListener('keydown',e=>{if(e.key==='Escape'){if(openPos)closeP();if(openV)vClose()}});
 addEventListener('hashchange',route);route();render();
 
