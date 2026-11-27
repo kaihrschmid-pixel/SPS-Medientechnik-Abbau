@@ -123,6 +123,18 @@ h2 small{font-size:14px;color:var(--mute);font-weight:600}
 .vg h3{font-family:var(--hf);font-size:16px;margin:14px 0 6px;display:flex;justify-content:space-between}
 .vg h3 small{color:var(--mute);font-weight:500}
 .qty .eq{min-height:36px;padding:0 10px;border-radius:999px;border:1.5px solid var(--acc);background:transparent;color:var(--acc);font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap}
+.qty .pm1{min-width:40px;min-height:40px;border-radius:10px;border:1.5px solid var(--line);background:transparent;color:var(--ink);font-size:20px;font-weight:700;cursor:pointer;line-height:1}
+.isb{border:0;background:none;color:var(--mute);font-size:13px;padding:6px 0 0;min-height:32px;cursor:pointer;text-decoration:underline}
+.itag{display:inline-block;margin-top:4px;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:700;background:var(--A);color:#fff}
+.itag.fehlt{background:var(--org)}.itag.bleibt{background:var(--vio)}
+.iss{grid-column:1/-1;display:grid;gap:8px;padding:10px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.03)}
+.iss .ch{display:flex;flex-wrap:wrap;gap:6px}
+.iss .ch button{min-height:38px;padding:0 12px;border-radius:999px;border:1.5px solid var(--line);background:transparent;color:var(--ink);font-weight:600;cursor:pointer}
+.iss .ch button.on{background:var(--A);border-color:var(--A);color:#fff}
+.iss input{font:inherit;padding:10px;border-radius:10px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);min-height:44px}
+.iss small{color:var(--mute)}
+@media (max-width:640px){#packList .item{grid-template-columns:auto minmax(0,1fr)}#packList .item .qty{grid-column:2;justify-content:flex-start}}
+.qbadge{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:900;background:var(--C);color:#05050F;font-weight:700;padding:8px 16px;border-radius:999px;box-shadow:0 4px 18px rgba(0,0,0,.5);max-width:92vw;text-align:center}
 .offl{display:grid;gap:4px;margin-top:8px}.offl button{display:flex;gap:10px;align-items:center;text-align:left;min-height:44px;padding:6px 10px;border:1px solid var(--line);border-radius:10px;background:transparent;color:var(--ink);cursor:pointer}
 .offl i{width:12px;height:12px;border-radius:50%;flex:none}.offl b{font-family:var(--hf);min-width:70px}.offl span{color:var(--mute);font-size:14px}
 .back{border:0;background:none;color:var(--acc);font-weight:700;padding:0;min-height:36px;cursor:pointer}
@@ -234,6 +246,7 @@ const banner=t=>{const b=document.getElementById('banner');b.textContent=t||'';b
 
 const posState=p=>Object.assign({status:stMap[p.status]||'offen',prio:p.prio},S.pos[p.id]||{});
 const packState=it=>Object.assign({ist:null,done:false},S.pack[it.id]||{});
+const ISS={defekt:'Defekt',fehlt:'Fehlt',bleibt:'Bleibt vor Ort'};
 
 const F={team:'',p1:false,hide:false,q:'',tr:'',hidePacked:false,qp:''};
 const sel=(id)=>document.getElementById(id);
@@ -315,16 +328,20 @@ const trs=[...new Set(D.pack.map(i=>i.t))];
 sel('fPack').innerHTML='<button class="chip on" data-tr="">Alle Transporte</button>'+trs.map(t=>`<button class="chip" data-tr="${esc(t)}">${esc(t.split(' · ')[0])}</button>`).join('');
 let packDirty=false;
 function renderPack(){
-  const ae=document.activeElement;if(ae&&ae.dataset&&ae.dataset.ist){packDirty=true;return}packDirty=false;
+  const ae=document.activeElement;if(ae&&ae.tagName==='INPUT'&&ae.type!=='checkbox'&&ae.closest('#packList')){packDirty=true;return}packDirty=false;
   const q=F.qp.toLowerCase();
   const html=trs.filter(t=>!F.tr||t===F.tr).map(t=>{
     const all=D.pack.filter(i=>i.t===t),dn=all.filter(i=>packState(i).done).length;
     const rows=all.filter(i=>(!F.hidePacked||!packState(i).done)&&(!q||(i.n+' '+i.a+' '+i.note).toLowerCase().includes(q)));
     if(!rows.length)return '';
-    return `<h2>${esc(t)} <small>${dn}/${all.length} gepackt</small></h2>`+rows.map(i=>{const s=packState(i);const d=s.ist==null||i.soll==null?'':s.ist-i.soll;
+    const ni=all.filter(i=>packState(i).issue).length;
+    return `<h2>${esc(t)} <small>${dn}/${all.length} gepackt${ni?` · <span style="color:var(--A)">${ni} Problem${ni>1?'e':''}</span>`:''}</small></h2>`+rows.map(i=>{const s=packState(i);const d=s.ist==null||i.soll==null?'':s.ist-i.soll;const op=F.iss===i.id;
       return `<div class="item${s.done?' done':''}"><input type="checkbox" data-pk="${i.id}" ${s.done?'checked':''} aria-label="gepackt">
-      <div><div class="nm">${esc(i.n)}</div><div class="sub">${esc(i.a)}${i.note?' · '+esc(i.note):''}${s.by?' · ✓ '+esc(s.by)+' '+esc(s.at||''):''}</div></div>
-      <div class="qty"><input type="number" inputmode="numeric" min="0" data-ist="${i.id}" value="${s.ist??''}" placeholder="Ist" aria-label="Ist-Menge"><span class="soll">/ ${i.soll??'–'}</span>${i.soll!=null&&s.ist!==i.soll?`<button class="eq" data-eq="${i.id}" aria-label="Ist = Soll (${i.soll})">= ${i.soll}</button>`:''}${d===''?'':`<span class="diff" style="color:${d<0?'var(--A)':d>0?'var(--B)':'var(--ok)'}">${d>0?'+':''}${d}</span>`}</div></div>`}).join('');
+      <div><div class="nm">${esc(i.n)}</div><div class="sub">${esc(i.a)}${i.note?' · '+esc(i.note):''}${s.by?' · ✓ '+esc(s.by)+' '+esc(s.at||''):''}</div>${s.issue?`<span class="itag ${s.issue}">${ISS[s.issue]}${s.sn?' · SN '+esc(s.sn):''}${s.inote?' · '+esc(s.inote):''}</span><br>`:''}<button class="isb" data-iss="${i.id}">${op?'Schließen':s.issue?'Problem bearbeiten':'Problem melden'}</button></div>
+      <div class="qty"><button class="pm1" data-inc="${i.id}" data-d="-1" aria-label="eins weniger">−</button><input type="number" inputmode="numeric" min="0" data-ist="${i.id}" value="${s.ist??''}" placeholder="Ist" aria-label="Ist-Menge"><button class="pm1" data-inc="${i.id}" data-d="1" aria-label="eins mehr">+</button><span class="soll">/ ${i.soll??'–'}</span>${i.soll!=null&&s.ist!==i.soll?`<button class="eq" data-eq="${i.id}" aria-label="Ist = Soll (${i.soll})">= ${i.soll}</button>`:''}${d===''?'':`<span class="diff" style="color:${d<0?'var(--A)':d>0?'var(--B)':'var(--ok)'}">${d>0?'+':''}${d}</span>`}</div>${op?`<div class="iss"><div class="ch">${Object.entries(ISS).map(([k,l])=>`<button data-isk="${i.id}" data-v="${k}" class="${s.issue===k?'on':''}">${l}</button>`).join('')}${s.issue?`<button data-isk="${i.id}" data-v="">Kein Problem</button>`:''}</div>
+        <input data-inote="${i.id}" value="${esc(s.inote||'')}" placeholder="Was ist los? z. B. Netzteil tot, Kratzer" aria-label="Notiz">
+        <input data-sn="${i.id}" value="${esc(s.sn||'')}" placeholder="Seriennummer" aria-label="Seriennummer" autocapitalize="characters" autocomplete="off">
+        <small>Tipp: Ins Seriennummer-Feld tippen, dann „Text scannen“ (iPhone) bzw. Kamera-Symbol der Tastatur (Android) – liest die Nummer vom Typenschild.</small></div>`:''}</div>`}).join('');
   }).join('');
   sel('packList').innerHTML=html||'<p class="empty">Nichts gefunden.</p>';
 }
@@ -410,13 +427,32 @@ async function save(col,id,data){
   const who=me.value.trim()||'?';const body=Object.assign({},S[col][id]||{},data,{by:who,at:now()});
   S[col][id]=body;render();
   if(!canWrite)return;
-  const rc=col==='vvk'?'pack':col,ri=col==='vvk'?'v:'+id:id;
-  try{await rpc('set_state',{p_key:U.rpcKey,p_col:rc,p_id:ri,p_data:body});pull()}catch(e){if(e.status===401||e.status===403){canWrite=false;banner('Zugang zur Datenbank verweigert – Seite neu laden.')}else banner('Speichern hat gerade nicht geklappt – bitte nochmal tippen.')}
+  Q[col+'|'+id]={col,id,body};qSave();flush();
 }
+let Q={};try{Q=JSON.parse(localStorage.getItem('abbau-q')||'{}')}catch(e){}
+function qSave(){try{localStorage.setItem('abbau-q',JSON.stringify(Q))}catch(e){}qBadge()}
+function qBadge(){const n=Object.keys(Q).length;let el=document.getElementById('qb');if(!n){if(el)el.remove();return}
+  if(!el){el=document.createElement('div');el.id='qb';el.className='qbadge';el.setAttribute('role','status');document.body.appendChild(el)}
+  el.textContent=n===1?'1 Änderung wartet auf Netz – wird automatisch gesendet':`${n} Änderungen warten auf Netz – werden automatisch gesendet`}
+function qApply(){for(const {col,id,body} of Object.values(Q))if(S[col])S[col][id]=body}
+let flushing=false;
+async function flush(){
+  if(flushing||!canWrite)return;flushing=true;let sent=0;
+  try{for(const [k,{col,id,body}] of Object.entries(Q)){
+    const rc=col==='vvk'?'pack':col,ri=col==='vvk'?'v:'+id:id;
+    try{await rpc('set_state',{p_key:U.rpcKey,p_col:rc,p_id:ri,p_data:body});sent++;if(Q[k]&&Q[k].body===body)delete Q[k];qSave()}
+    catch(e){if(e.status===401||e.status===403){canWrite=false;banner('Zugang zur Datenbank verweigert – Seite neu laden.')}break}
+  }}finally{flushing=false}
+  if(sent){pull();if(Object.keys(Q).length&&canWrite)setTimeout(flush,50)}
+}
+addEventListener('online',()=>flush());
 
 document.addEventListener('click',e=>{
   const g=e.target.closest('[data-goto]');if(g){location.hash='#plan';setTimeout(()=>openP(g.dataset.goto,true),60);return}
   const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.inc){const it=D.pack.find(x=>x.id===b.dataset.inc);const s=packState(it);save('pack',it.id,{ist:Math.max(0,(s.ist??0)+(+b.dataset.d))});return}
+  if(b.dataset.iss){F.iss=F.iss===b.dataset.iss?null:b.dataset.iss;renderPack();return}
+  if('isk' in b.dataset){const v=b.dataset.v||null;save('pack',b.dataset.isk,{issue:v});return}
   if(b.dataset.eq){const it=D.pack.find(x=>x.id===b.dataset.eq);const s=packState(it);save('pack',it.id,{ist:it.soll,done:s.done});return}
   if(b.id==='panelX'){closeP();return}
   if(b.id==='vpanelX'){vClose();return}
@@ -435,12 +471,14 @@ document.addEventListener('click',e=>{
   else if('tr' in b.dataset){F.tr=b.dataset.tr;document.querySelectorAll('#fPack [data-tr]').forEach(c=>c.classList.toggle('on',c===b));renderPack()}
   else if(b.id==='hidePacked'){F.hidePacked=!F.hidePacked;b.classList.toggle('on',F.hidePacked);renderPack()}
 });
-document.addEventListener('focusout',e=>{if(e.target.dataset&&e.target.dataset.ist&&packDirty)setTimeout(()=>{if(!(document.activeElement&&document.activeElement.dataset&&document.activeElement.dataset.ist))renderPack()},0)});
-document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.dataset&&e.target.dataset.ist)e.target.blur()});
+document.addEventListener('focusout',e=>{if(packDirty&&e.target.closest&&e.target.closest('#packList'))setTimeout(()=>{const a=document.activeElement;if(!(a&&a.tagName==='INPUT'&&a.type!=='checkbox'&&a.closest('#packList')))renderPack()},0)});
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.tagName==='INPUT'&&e.target.closest&&e.target.closest('#packList'))e.target.blur()});
 document.addEventListener('change',e=>{
   const t=e.target;
   if(t.dataset.pk){const s=packState({id:t.dataset.pk});save('pack',t.dataset.pk,{ist:s.ist,done:t.checked})}
-  else if(t.dataset.ist){const v=t.value===''?null:Math.max(0,parseInt(t.value,10)||0);const s=packState({id:t.dataset.ist});save('pack',t.dataset.ist,{ist:v,done:s.done})}
+  else if(t.dataset.inote){const id=t.dataset.inote,v=t.value.trim();setTimeout(()=>save('pack',id,{inote:v}),0)}
+  else if(t.dataset.sn){const id=t.dataset.sn,v=t.value.trim().toUpperCase();setTimeout(()=>save('pack',id,{sn:v}),0)}
+  else if(t.dataset.ist){const v=t.value===''?null:Math.max(0,parseInt(t.value,10)||0);const id=t.dataset.ist;setTimeout(()=>{const s=packState({id});save('pack',id,{ist:v,done:s.done})},0)}
   else if(t.dataset.ab){save('ablauf',t.dataset.ab,{done:t.checked})}
 });
 sel('qPos').addEventListener('input',e=>{F.q=e.target.value;renderPos()});
@@ -460,12 +498,12 @@ async function pull(){
   if(busy)return;busy=true;
   try{const rows=await rpc('get_state',{p_key:U.rpcKey,p_since:since});
     if(rows.length){let mx=0;for(const r of rows){if(r.col==='pack'&&r.id.startsWith('v:'))S.vvk[r.id.slice(2)]=r.data;else if(S[r.col])S[r.col][r.id]=r.data;mx=Math.max(mx,Date.parse(r.updated_at)||0)}
-      if(mx)since=new Date(Math.max(Date.parse(since),mx-5000)).toISOString();render()}
+      if(mx)since=new Date(Math.max(Date.parse(since),mx-5000)).toISOString();qApply();render()}
     if(!online){online=true;banner('')}
   }catch(e){online=false;banner(e.status===401||e.status===403?'Zugang zur Datenbank verweigert.':'Keine Verbindung zur Datenbank – Änderungen werden evtl. nicht geteilt.')}
   finally{busy=false}
 }
-pull();setInterval(()=>{if(!document.hidden)pull()},3000);
+qApply();render();qBadge();pull();flush();setInterval(()=>{if(!document.hidden){pull();if(Object.keys(Q).length)flush()}},3000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)pull()});
 }
 </script>
